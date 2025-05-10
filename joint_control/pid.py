@@ -34,10 +34,10 @@ class PIDController(object):
         self.e1 = np.zeros(size)
         self.e2 = np.zeros(size)
         # ADJUST PARAMETERS BELOW
-        delay = 0
-        self.Kp = 0
-        self.Ki = 0
-        self.Kd = 0
+        delay = 0                   # when i increase this the simulation software dies so i just let it 0
+        self.Kp = 19                # at this the head moved fast to the designated point without oscilating   
+        self.Ki = -0.2              # from here i just tried to guess by seeing how the robot moved because the plot was not showing for me
+        self.Kd = -0.1              # i couldnt see the graph or anything even tho i installed everything
         self.y = deque(np.zeros(size), maxlen=delay + 1)
 
     def set_delay(self, delay):
@@ -53,6 +53,11 @@ class PIDController(object):
         @return control signal
         '''
         # YOUR CODE HERE
+        e = target - sensor                    
+        self.u = self.y + (self.Kp + self.Ki*self.dt+(self.Kd/self.dt))*e - (self.Kp + (2*self.Kd/self.dt))*self.e1 + (self.Kd/self.dt)*self.e2   # from lecture
+        self.e2 = self.e1       # save the error
+        self.e1 = e
+        self.y = self.u
 
         return self.u
 

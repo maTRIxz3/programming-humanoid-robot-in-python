@@ -7,6 +7,11 @@
 
 
 from recognize_posture import PostureRecognitionAgent
+from keyframes import leftBackToStand
+from keyframes import leftBellyToStand
+from keyframes import rightBackToStand
+from keyframes import rightBellyToStand
+from keyframes import hello
 
 
 class StandingUpAgent(PostureRecognitionAgent):
@@ -19,6 +24,20 @@ class StandingUpAgent(PostureRecognitionAgent):
         # YOUR CODE HERE
 
 
+        if posture == 1:
+            self.keyframes = rightBellyToStand()
+        
+
+        if posture == 0:
+            self.keyframes = leftBackToStand()
+        
+        if posture == 9:
+            self.keyframes = hello()    # to reset start_time by changing current keyframe from prev_keyframe. could also do with a flag but idk how
+                                        # problem is when robot falls on back or belly again before reaching posture 9 then prev_keyframe wont be updated and start_time wont be resetted
+
+
+
+
 class TestStandingUpAgent(StandingUpAgent):
     '''this agent turns off all motor to falls down in fixed cycles
     '''
@@ -29,7 +48,7 @@ class TestStandingUpAgent(StandingUpAgent):
                  sync_mode=True):
         super(TestStandingUpAgent, self).__init__(simspark_ip, simspark_port, teamname, player_id, sync_mode)
         self.stiffness_on_off_time = 0
-        self.stiffness_on_cycle = 10  # in seconds
+        self.stiffness_on_cycle = 20  # in seconds
         self.stiffness_off_cycle = 3  # in seconds
 
     def think(self, perception):
