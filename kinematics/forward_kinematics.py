@@ -20,7 +20,7 @@
 import os
 import sys
 sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'joint_control'))
-
+from numpy import sin, cos, pi
 from numpy.matlib import matrix, identity
 
 from recognize_posture import PostureRecognitionAgent
@@ -36,8 +36,12 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         self.transforms = {n: identity(4) for n in self.joint_names}
 
         # chains defines the name of chain and joints of the chain
-        self.chains = {'Head': ['HeadYaw', 'HeadPitch']
+        self.chains = {'Head': ['HeadYaw', 'HeadPitch'],
                        # YOUR CODE HERE
+                        'LArm': ['LShoulderPitch', 'LShoulderRoll', 'LElbowYaw', 'LElbowRoll'],
+                        'RArm': ['RShoulderPitch', 'RShoulderRoll', 'RElbowYaw', 'RElbowRoll'],
+                        'LLeg': ['LHipYawPitch', 'LHipRoll', 'LHipPitch', 'LKneePitch', 'LAnklePitch', 'LAnkleRoll'],
+                        'RLeg': ['RHipYawPitch', 'RHipRoll', 'RHipPitch', 'RKneePitch', 'RAnklePitch', 'RAnkleRoll']
                        }
 
     def think(self, perception):
@@ -53,7 +57,73 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
         :rtype: 4x4 matrix
         '''
         T = identity(4)
-        # YOUR CODE HERE
+
+        # Definition der Rotationsachsen laut NAO-Doku:
+        if joint_name in ['HeadYaw', 'LShoulderYaw', 'RShoulderYaw',
+                          'LHipYawPitch', 'RHipYawPitch','LShoulderRoll','RShoulderRoll']:
+            axis = 'z'
+        elif joint_name in ['HeadPitch', 'LElbowYaw', 'RElbowYaw',
+                            'LShoulderPitch', 'RShoulderPitch',
+                            'LHipPitch', 'RHipPitch',
+                            'LKneePitch', 'RKneePitch',
+                            'LAnklePitch', 'RAnklePitch']:
+            axis = 'y'
+        elif joint_name in ['LElbowRoll', 'RElbowRoll',
+                            'LHipRoll', 'RHipRoll',
+                            'LAnkleRoll', 'RAnkleRoll']:
+            axis = 'x'
+        else:
+            raise ValueError(f"Unbekanntes Gelenk: {joint_name}")
+
+
+        if axis == 'x':
+            T[1,1] = cos(joint_angle)
+            T[1,2] = -sin(joint_angle)
+            T[2,1] = sin(joint_angle)
+            T[2,2] = cos(joint_angle)
+        elif axis == 'y':
+            T[0,0] = cos(joint_angle)
+            T[0,2] = sin(joint_angle)
+            T[2,0] = -sin(joint_angle)
+            T[2,2] = cos(joint_angle)
+        elif axis == 'z':
+            T[0,0] = cos(joint_angle)
+            T[0,1] = -sin(joint_angle)
+            T[1,0] = sin(joint_angle)
+            T[1,1] = cos(joint_angle)
+        
+        Tx = 0.0
+        Ty = 0.0
+        Tz = 0.0
+
+        if joint_name == 'HeadYaw':
+            Tz = 0.1265 
+        elif joint_name in ['LShoulderPitch','RShoulderPitch']:
+            Tz = 0.1
+            Ty = 0.098
+        elif joint_name in ['LElbowYaw','RElbowYaw']:
+            Ty = 0.015
+            Tx = 0.105
+        elif joint_name in ['LWristYaw','RWristYaw']:
+            Tx = 0.05595
+        elif joint_name in ['LElbowYaw','RElbowYaw']:
+            Ty = 0.015
+            Tx = 0.105
+        elif joint_name in ['LHipYawPitch','RYawPitch']:
+            Tz = -0.085
+            Ty = 0.05
+        elif joint_name in ['LKneePitch','RKneePitch']:
+            Tz = -0.1
+        elif joint_name in ['LAnklePitch','RAnklePitch']:
+            Tz = -0.1029
+        elif joint_name in ['LHipYawPitch','RHipYawPitch']:
+            Tz = -0.085
+
+
+        # Trage Translation in T ein
+        T[0,3] = Tx
+        T[1,3] = Ty
+        T[2,3] = Tz
 
         return T
 
@@ -68,6 +138,8 @@ class ForwardKinematicsAgent(PostureRecognitionAgent):
                 angle = joints[joint]
                 Tl = self.local_trans(joint, angle)
                 # YOUR CODE HERE
+
+                T = T @ Tl  # Transformation aufbauen
 
                 self.transforms[joint] = T
 

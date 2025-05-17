@@ -46,13 +46,13 @@ class AngleInterpolationAgent(PIDAgent):
         #logging.debug(perception.time)         # tried to see what simulation time we have and saw its way over the keyframe times
 
         if self.keyframes != self.prev_keyframe:
-            self.start_time = perception.time  # save the time we started new keyframe motion (Probblem when the robot doesnt stand up and fall on back or belle again a second time so the starttime wont be resettet)
+            self.start_time = float(perception.time) # save the time we started new keyframe motion (Probblem when the robot doesnt stand up and fall on back or belle again a second time so the starttime wont be resettet)
             self.prev_keyframe = self.keyframes
 
         #if self.start_time is None:
            # self.start_time = perception.time   # save the time we started our agent (very first time) before standing_up.py
 
-        relative_time = perception.time - self.start_time   # the simulation time - the time we started our agent is the time we have rn to let the robot move by their keyframes
+        relative_time = float(perception.time) - self.start_time   # the simulation time - the time we started our agent is the time we have rn to let the robot move by their keyframes
         target_joints = self.angle_interpolation(self.keyframes, relative_time)
 
         # hello() doesnt have LHipYawPitch which is correct because it doesnt need that but the code wont compile if we tried to acces that so i removed that only for hello()
@@ -72,33 +72,38 @@ class AngleInterpolationAgent(PIDAgent):
         )
 
     def get_angle_at_time(self, times, keys, t_now):
+        t_now = float(t_now)
         for i in range(len(times) - 1):
             t0 = times[i]
             t1 = times[i + 1]
+
             if t0 <= t_now <= t1:
                 k0 = keys[i]
                 k1 = keys[i + 1]
+
+                if isinstance(k0, float) or isinstance(k1, float):
+                    # Kein Bezier, also lineare Interpolation oder direkt zurückgeben
+                    a0 = k0 if isinstance(k0, float) else k0[0]
+                    a1 = k1 if isinstance(k1, float) else k1[0]
+                    dt = t1 - t0
+                    t = (t_now - t0) / dt
+                    return (1 - t) * a0 + t * a1  # einfache lineare Interpolation
 
                 # Bezier-Interpolation
                 a0, h0_1, h0_2 = k0
                 a1, h1_1, h1_2 = k1
 
-                # calc handle relative to time diff
                 dt = t1 - t0
                 t = (t_now - t0) / dt
 
-                # handle angle
-                h1_angle = a0 + h0_2[2]  # Handle nach k0
-                h2_angle = a1 + h1_1[2]  # Handle vor k1
+                h1_angle = a0 + h0_2[2]
+                h2_angle = a1 + h1_1[2]
 
                 return self.bezier(a0, h1_angle, h2_angle, a1, t)
 
-        # if time too big then take last keyframe
+        # Falls t_now > alle Zeiten, nimm letzten Wert
         last_key = keys[-1]
         return last_key if isinstance(last_key, float) else last_key[0]
-
-
-        #return None
 
     def angle_interpolation(self, keyframes, perception):
         # YOUR CODE HERE
